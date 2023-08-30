@@ -1,0 +1,3 @@
+
+class BadOpenAIResponse(Exception):
+    pass
