@@ -1,11 +1,20 @@
+from flask import Flask, request
+from flask_cors import CORS, cross_origin
 import json
 import openai
 import os
-from exceptions import BadOpenAIResponse
 
 DEFAULT_SONG_THEME = "something random"
 LINES_OF_LYRICS = 4
 MAX_WORDS_PER_LINE = 8
+
+class BadOpenAIResponse(Exception):
+    pass
+
+app = Flask(__name__)
+CORS(app)
+
+LINES_OF_LYRICS = 4
 
 def make_openai_api_request(content):
     openai.organization = os.getenv("OPENAI_ORG")
@@ -31,3 +40,24 @@ def song_response_parser(chatgpt_response):
 
 def get_song_template(song_theme=DEFAULT_SONG_THEME, lines_of_lyrics=LINES_OF_LYRICS):
     return f"Write me a song name and ${lines_of_lyrics} lines of lyrics for a song about ${song_theme}. Each line in the lyrics should have a maximum of ${MAX_WORDS_PER_LINE} words. I want the response in a JSON format where the song title has the key 'song_title' and the lyrics have the key 'song_lyrics'"
+
+@app.route("/")
+def index():
+    return {"ok": "ok"}, 200
+
+@app.route('/get_song',methods = ['POST'])
+@cross_origin()
+def get_song():
+    if request.method != 'POST':
+        return {}, 500
+    
+    post_req_json = request.get_json()
+    song_theme = post_req_json["song_theme"]
+
+    song_template = get_song_template(song_theme)
+    response = make_openai_api_request(song_template)
+    resp_body = song_response_parser(response)
+
+    return resp_body, 200
+
+
